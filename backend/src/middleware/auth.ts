@@ -7,15 +7,17 @@ interface JWTPayload {
 }
 
 export function generateToken(payload: JWTPayload): string {
-  return jwt.sign(payload, process.env.JWT_SECRET || 'your-secret-key', {
+  const secret: string = process.env.JWT_SECRET || 'your-secret-key';
+  return jwt.sign(payload, secret, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
+  } as jwt.SignOptions);
 }
 
 export function generateRefreshToken(payload: JWTPayload): string {
-  return jwt.sign(payload, process.env.JWT_SECRET || 'your-secret-key', {
+  const secret: string = process.env.JWT_SECRET || 'your-secret-key';
+  return jwt.sign(payload, secret, {
     expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '30d',
-  });
+  } as jwt.SignOptions);
 }
 
 export function authenticateToken(token: string): JWTPayload {

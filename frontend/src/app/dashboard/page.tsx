@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useQuery, gql } from '@apollo/client';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import {
   Wallet,
@@ -9,92 +10,146 @@ import {
   Trophy,
   MessageSquare,
   ArrowRight,
+  Loader2,
 } from 'lucide-react';
 
+const GET_USER_DASHBOARD = gql`
+  query GetUserDashboard {
+    me {
+      id
+      firstName
+      lastName
+      progress {
+        coursesCompleted
+        currentStreak
+        experiencePoints
+        level
+      }
+    }
+    portfolio {
+      totalValue
+      cashBalance
+      performanceData {
+        totalGainLoss
+        totalGainLossPercent
+      }
+    }
+    budget {
+      totalIncome
+      currentSavings
+      savingsGoal
+    }
+  }
+`;
+
 export default function DashboardPage() {
+  const { data, loading, error } = useQuery(GET_USER_DASHBOARD);
+
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+          {/* Welcome Section */}
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold mb-2">
+              Welcome back{data?.me ? `, ${data.me.firstName}` : ''}!
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Here's your financial learning progress
+            </p>
+          </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">Welcome back!</h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            Here's your financial learning progress
-          </p>
-        </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+              <span className="ml-2 text-gray-600 dark:text-gray-400">Loading your dashboard...</span>
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg">
+              Unable to load dashboard data. Please try refreshing the page.
+            </div>
+          ) : (
+            <>
 
-        {/* Quick Stats */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            title="Learning Streak"
-            value="12 days"
-            icon={<Trophy className="w-6 h-6 text-yellow-500" />}
-            change="+3 from last week"
-          />
-          <StatCard
-            title="Courses Completed"
-            value="8"
-            icon={<BookOpen className="w-6 h-6 text-blue-500" />}
-            change="2 in progress"
-          />
-          <StatCard
-            title="Portfolio Value"
-            value="$103,450"
-            icon={<TrendingUp className="w-6 h-6 text-green-500" />}
-            change="+3.45%"
-            positive
-          />
-          <StatCard
-            title="Budget Health"
-            value="92%"
-            icon={<Wallet className="w-6 h-6 text-purple-500" />}
-            change="On track"
-          />
-        </div>
+              {/* Quick Stats */}
+              <div className="grid md:grid-cols-4 gap-6 mb-8">
+                <StatCard
+                  title="Learning Streak"
+                  value={`${data?.me?.progress?.currentStreak || 0} days`}
+                  icon={<Trophy className="w-6 h-6 text-yellow-500" />}
+                  change={`Level ${data?.me?.progress?.level || 1}`}
+                />
+                <StatCard
+                  title="Courses Completed"
+                  value={data?.me?.progress?.coursesCompleted?.toString() || '0'}
+                  icon={<BookOpen className="w-6 h-6 text-blue-500" />}
+                  change={`${data?.me?.progress?.experiencePoints || 0} XP earned`}
+                />
+                <StatCard
+                  title="Portfolio Value"
+                  value={`$${(data?.portfolio?.totalValue || 100000).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  icon={<TrendingUp className="w-6 h-6 text-green-500" />}
+                  change={`${data?.portfolio?.performanceData?.totalGainLossPercent >= 0 ? '+' : ''}${(data?.portfolio?.performanceData?.totalGainLossPercent || 0).toFixed(2)}%`}
+                  positive={data?.portfolio?.performanceData?.totalGainLossPercent >= 0}
+                />
+                <StatCard
+                  title="Budget Health"
+                  value={data?.budget?.savingsGoal > 0
+                    ? `${Math.round((data?.budget?.currentSavings / data?.budget?.savingsGoal) * 100)}%`
+                    : 'Not set'}
+                  icon={<Wallet className="w-6 h-6 text-purple-500" />}
+                  change={data?.budget?.savingsGoal > 0
+                    ? `$${data?.budget?.currentSavings?.toLocaleString()} saved`
+                    : 'Set your goal'}
+                />
+              </div>
 
-        {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <ActionCard
-            icon={<Wallet className="w-8 h-8" />}
-            title="Budget Simulator"
-            description="Practice managing your monthly budget"
-            href="/budget"
-            color="bg-purple-500"
-          />
-          <ActionCard
-            icon={<TrendingUp className="w-8 h-8" />}
-            title="Stock Market Game"
-            description="Build your virtual investment portfolio"
-            href="/portfolio"
-            color="bg-green-500"
-          />
-          <ActionCard
-            icon={<BookOpen className="w-8 h-8" />}
-            title="Learning Center"
-            description="Continue your financial education"
-            href="/learn"
-            color="bg-blue-500"
-          />
-          <ActionCard
-            icon={<Trophy className="w-8 h-8" />}
-            title="Weekly Challenges"
-            description="Compete and earn rewards"
-            href="/challenges"
-            color="bg-yellow-500"
-          />
-          <ActionCard
-            icon={<MessageSquare className="w-8 h-8" />}
-            title="AI Financial Coach"
-            description="Ask questions, get instant answers"
-            href="/chat"
-            color="bg-pink-500"
-          />
-        </div>
-      </main>
-    </div>
+              {/* Quick Actions */}
+              <div>
+                <h3 className="text-2xl font-bold mb-6">Quick Actions</h3>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <ActionCard
+                    icon={<Wallet className="w-8 h-8" />}
+                    title="Budget Simulator"
+                    description="Practice managing your monthly budget"
+                    href="/budget"
+                    color="bg-purple-500"
+                  />
+                  <ActionCard
+                    icon={<TrendingUp className="w-8 h-8" />}
+                    title="Stock Market Game"
+                    description="Build your virtual investment portfolio"
+                    href="/portfolio"
+                    color="bg-green-500"
+                  />
+                  <ActionCard
+                    icon={<BookOpen className="w-8 h-8" />}
+                    title="Learning Center"
+                    description="Continue your financial education"
+                    href="/learn"
+                    color="bg-blue-500"
+                  />
+                  <ActionCard
+                    icon={<Trophy className="w-8 h-8" />}
+                    title="Weekly Challenges"
+                    description="Compete and earn rewards"
+                    href="/challenges"
+                    color="bg-yellow-500"
+                  />
+                  <ActionCard
+                    icon={<MessageSquare className="w-8 h-8" />}
+                    title="AI Financial Coach"
+                    description="Ask questions, get instant answers"
+                    href="/chat"
+                    color="bg-pink-500"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+        </main>
+      </div>
     </ProtectedRoute>
   );
 }
@@ -121,7 +176,7 @@ function StatCard({
       <div className="text-2xl font-bold mb-1">{value}</div>
       <div
         className={`text-sm ${
-          positive ? 'text-green-600' : 'text-gray-500'
+          positive === undefined ? 'text-gray-500' : positive ? 'text-green-600' : 'text-red-600'
         }`}
       >
         {change}

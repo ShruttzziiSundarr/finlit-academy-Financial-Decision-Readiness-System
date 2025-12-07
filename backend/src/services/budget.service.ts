@@ -73,7 +73,7 @@ export class BudgetService {
     }
   }
 
-  async createExpense(userId: string, input: any) {
+  async createExpense(_userId: string, input: any) {
     try {
       const result = await query(
         `INSERT INTO expenses (category_id, description, amount, date, recurring, frequency)
@@ -129,7 +129,7 @@ export class BudgetService {
   async deleteExpense(id: string) {
     try {
       const result = await query('DELETE FROM expenses WHERE id = $1', [id]);
-      return result.rowCount > 0;
+      return (result.rowCount ?? 0) > 0;
     } catch (error) {
       logger.error('Delete expense error:', error);
       throw error;

@@ -52,3 +52,10 @@ Thumbs.db
 
 # Redis
 dump.rdb
+node_modules/
+.env
+.env.local
+dist
+build
+.next
+.vercel

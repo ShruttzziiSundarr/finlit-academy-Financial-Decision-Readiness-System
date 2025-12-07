@@ -5,15 +5,20 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'finlit_academy',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD,
-});
+// Use DATABASE_URL if available, otherwise fall back to individual connection params
+const pool = new Pool(
+  process.env.DATABASE_URL
+    ? { connectionString: process.env.DATABASE_URL }
+    : {
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT || '5432'),
+        database: process.env.DB_NAME || 'finlit_academy',
+        user: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD,
+      }
+);
 
-async function migrate() {
+async function migrate(): Promise<void> {
   console.log('🚀 Starting database migration...\n');
 
   try {
@@ -24,8 +29,8 @@ async function migrate() {
 
     // Read schema file
     console.log('📖 Reading schema.sql...');
-    const schemaPath = path.join(__dirname, 'schema.sql');
-    const schema = fs.readFileSync(schemaPath, 'utf-8');
+    const schemaPath: string = path.join(__dirname, 'schema.sql');
+    const schema: string = fs.readFileSync(schemaPath, 'utf-8');
     console.log('✅ Schema file loaded!\n');
 
     // Execute schema
@@ -35,7 +40,7 @@ async function migrate() {
 
     // Verify tables
     console.log('🔍 Verifying tables...');
-    const result = await pool.query(`
+    const result = await pool.query<{ table_name: string }>(`
       SELECT table_name
       FROM information_schema.tables
       WHERE table_schema = 'public'
@@ -51,13 +56,13 @@ async function migrate() {
     console.log('\nNext steps:');
     console.log('1. Run: npm run db:seed (to add sample data)');
     console.log('2. Run: npm run dev (to start the backend server)\n');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('\n❌ Migration failed:', error);
     console.error('\nTroubleshooting:');
     console.error('1. Check PostgreSQL is running');
     console.error('2. Verify credentials in backend/.env');
-    console.error('3. Ensure database "finlit_academy" exists');
-    console.error('4. Run: createdb finlit_academy\n');
+    console.error('3. Ensure database exists or DATABASE_URL is correct');
+    console.error('4. If using individual params, run: createdb finlit_academy\n');
     process.exit(1);
   } finally {
     await pool.end();

@@ -196,7 +196,7 @@ export class PortfolioService {
     }
   }
 
-  async getMarketNews(limit: number = 10) {
+  async getMarketNews(_limit: number = 10) {
     try {
       // In production, integrate with news API
       // For now, return mock data
