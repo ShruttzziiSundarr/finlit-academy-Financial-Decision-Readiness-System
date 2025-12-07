@@ -161,7 +161,7 @@ GraphQL Playground: http://localhost:4000/graphql
 4. **Accessibility**: Multilingual support and inclusive design
 5. **Privacy-first**: Optional banking integration with full data control
 
-## JPM Relevance
+## project outcomes
 
 This project demonstrates:
 - Commitment to financial wellness and education
