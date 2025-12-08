@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useQuery, useMutation, gql } from '@apollo/client';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Line } from 'react-chartjs-2';
 import {
@@ -16,7 +17,17 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
-import { TrendingUp, TrendingDown, DollarSign, Search } from 'lucide-react';
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Search,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownRight,
+  Loader2,
+  ShoppingCart,
+} from 'lucide-react';
 
 ChartJS.register(
   CategoryScale,
@@ -29,6 +40,67 @@ ChartJS.register(
   Filler
 );
 
+const GET_PORTFOLIO = gql`
+  query GetPortfolio {
+    portfolio {
+      id
+      totalValue
+      cashBalance
+      holdings {
+        id
+        symbol
+        name
+        shares
+        avgCostPerShare
+        currentPrice
+        totalValue
+        gainLoss
+        gainLossPercent
+      }
+      transactions {
+        id
+        type
+        symbol
+        shares
+        pricePerShare
+        totalAmount
+        timestamp
+      }
+      performanceData {
+        totalGainLoss
+        totalGainLossPercent
+        dailyChange
+        dailyChangePercent
+      }
+    }
+  }
+`;
+
+const SEARCH_STOCKS = gql`
+  query SearchStocks($query: String!) {
+    searchStocks(query: $query) {
+      symbol
+      name
+      price
+      change
+      changePercent
+    }
+  }
+`;
+
+const EXECUTE_TRADE = gql`
+  mutation ExecuteTrade($input: TradeInput!) {
+    executeTrade(input: $input) {
+      id
+      type
+      symbol
+      shares
+      pricePerShare
+      totalAmount
+    }
+  }
+`;
+
 export default function PortfolioPage() {
   return (
     <ProtectedRoute>
@@ -39,260 +111,403 @@ export default function PortfolioPage() {
 
 function PortfolioContent() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStock, setSelectedStock] = useState<string | null>(null);
+  const [selectedStock, setSelectedStock] = useState<any>(null);
+  const [tradeType, setTradeType] = useState<'BUY' | 'SELL'>('BUY');
+  const [shares, setShares] = useState('');
+  const [showTradeModal, setShowTradeModal] = useState(false);
 
-  const portfolioData = {
-    totalValue: 103450.75,
-    cashBalance: 23450.75,
-    totalGainLoss: 3450.75,
-    totalGainLossPercent: 3.45,
-    dailyChange: 1250.30,
-    dailyChangePercent: 1.22,
+  const { data: portfolioData, loading, error, refetch } = useQuery(GET_PORTFOLIO);
+  const { data: searchData, loading: searching } = useQuery(SEARCH_STOCKS, {
+    variables: { query: searchQuery },
+    skip: searchQuery.length < 2,
+  });
+
+  const [executeTrade, { loading: trading }] = useMutation(EXECUTE_TRADE, {
+    onCompleted: () => {
+      refetch();
+      setShowTradeModal(false);
+      setShares('');
+      setSelectedStock(null);
+    },
+  });
+
+  const handleTrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStock || !shares) return;
+
+    try {
+      await executeTrade({
+        variables: {
+          input: {
+            symbol: selectedStock.symbol,
+            shares: parseFloat(shares),
+            type: tradeType,
+          },
+        },
+      });
+    } catch (err) {
+      console.error('Trade error:', err);
+    }
   };
 
-  const holdings = [
-    {
-      symbol: 'AAPL',
-      name: 'Apple Inc.',
-      shares: 50,
-      avgCost: 150.00,
-      currentPrice: 175.50,
-      totalValue: 8775.00,
-      gainLoss: 1275.00,
-      gainLossPercent: 17.00,
-    },
-    {
-      symbol: 'GOOGL',
-      name: 'Alphabet Inc.',
-      shares: 25,
-      avgCost: 120.00,
-      currentPrice: 140.25,
-      totalValue: 3506.25,
-      gainLoss: 506.25,
-      gainLossPercent: 16.88,
-    },
-    {
-      symbol: 'MSFT',
-      name: 'Microsoft Corp.',
-      shares: 30,
-      avgCost: 280.00,
-      currentPrice: 315.75,
-      totalValue: 9472.50,
-      gainLoss: 1072.50,
-      gainLossPercent: 12.77,
-    },
-    {
-      symbol: 'TSLA',
-      name: 'Tesla Inc.',
-      shares: 20,
-      avgCost: 200.00,
-      currentPrice: 245.80,
-      totalValue: 4916.00,
-      gainLoss: 916.00,
-      gainLossPercent: 22.90,
-    },
-    {
-      symbol: 'AMZN',
-      name: 'Amazon.com Inc.',
-      shares: 15,
-      avgCost: 130.00,
-      currentPrice: 155.25,
-      totalValue: 2328.75,
-      gainLoss: 378.75,
-      gainLossPercent: 19.42,
-    },
-  ];
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="flex items-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          <span className="ml-2 text-gray-600 dark:text-gray-400">Loading portfolio...</span>
+        </div>
+      </div>
+    );
+  }
 
-  const historicalData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    datasets: [
-      {
-        label: 'Portfolio Value',
-        data: [100000, 101500, 99800, 102000, 103200, 103450.75],
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        fill: true,
-        tension: 0.4,
-      },
-    ],
-  };
+  if (error || !portfolioData?.portfolio) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Unable to load portfolio
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Please try refreshing the page
+          </p>
+          <Button onClick={() => refetch()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
 
-  const recentTransactions = [
-    { id: 1, type: 'BUY', symbol: 'AAPL', shares: 10, price: 175.50, date: '2024-01-15', total: 1755.00 },
-    { id: 2, type: 'SELL', symbol: 'MSFT', shares: 5, price: 315.75, date: '2024-01-14', total: 1578.75 },
-    { id: 3, type: 'BUY', symbol: 'GOOGL', shares: 15, price: 140.25, date: '2024-01-12', total: 2103.75 },
-  ];
+  const portfolio = portfolioData.portfolio;
+  const holdings = portfolio.holdings || [];
+  const performance = portfolio.performanceData || {};
+  const totalInvested = portfolio.totalValue - portfolio.cashBalance;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Stock Market Portfolio</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">Stock Trading Simulator</h1>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Virtual Portfolio</span>
+          </div>
+        </div>
 
         {/* Portfolio Summary */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card className="p-6">
-            <div className="text-sm text-gray-600 mb-1">Total Value</div>
-            <div className="text-2xl font-bold">
-              ${portfolioData.totalValue.toLocaleString()}
-            </div>
-            <div className="flex items-center gap-1 text-sm text-green-600 mt-1">
-              <TrendingUp className="w-4 h-4" />
-              {portfolioData.dailyChangePercent}% today
-            </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+              <Wallet className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                ${portfolio.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+            </CardContent>
           </Card>
 
-          <Card className="p-6">
-            <div className="text-sm text-gray-600 mb-1">Cash Balance</div>
-            <div className="text-2xl font-bold">
-              ${portfolioData.cashBalance.toLocaleString()}
-            </div>
-            <div className="text-sm text-gray-500 mt-1">Available to trade</div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Cash Balance</CardTitle>
+              <DollarSign className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                ${portfolio.cashBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+            </CardContent>
           </Card>
 
-          <Card className="p-6">
-            <div className="text-sm text-gray-600 mb-1">Total Gain/Loss</div>
-            <div className="text-2xl font-bold text-green-600">
-              +${portfolioData.totalGainLoss.toLocaleString()}
-            </div>
-            <div className="text-sm text-green-600 mt-1">
-              +{portfolioData.totalGainLossPercent}%
-            </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Gain/Loss</CardTitle>
+              {performance.totalGainLoss >= 0 ? (
+                <ArrowUpRight className="h-4 w-4 text-green-500" />
+              ) : (
+                <ArrowDownRight className="h-4 w-4 text-red-500" />
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${performance.totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {performance.totalGainLoss >= 0 ? '+' : ''}${performance.totalGainLoss?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+              </div>
+              <p className="text-xs text-gray-500">
+                {performance.totalGainLossPercent >= 0 ? '+' : ''}{performance.totalGainLossPercent?.toFixed(2) || '0.00'}%
+              </p>
+            </CardContent>
           </Card>
 
-          <Card className="p-6">
-            <div className="text-sm text-gray-600 mb-1">Daily Change</div>
-            <div className="text-2xl font-bold text-green-600">
-              +${portfolioData.dailyChange.toLocaleString()}
-            </div>
-            <div className="text-sm text-green-600 mt-1">
-              +{portfolioData.dailyChangePercent}%
-            </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Daily Change</CardTitle>
+              {performance.dailyChange >= 0 ? (
+                <TrendingUp className="h-4 w-4 text-green-500" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-red-500" />
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${performance.dailyChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {performance.dailyChange >= 0 ? '+' : ''}${performance.dailyChange?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+              </div>
+              <p className="text-xs text-gray-500">
+                {performance.dailyChangePercent >= 0 ? '+' : ''}{performance.dailyChangePercent?.toFixed(2) || '0.00'}%
+              </p>
+            </CardContent>
           </Card>
         </div>
 
-        {/* Performance Chart */}
-        <Card className="p-6 mb-8">
-          <h2 className="text-xl font-bold mb-4">Portfolio Performance</h2>
-          <Line
-            data={historicalData}
-            options={{
-              responsive: true,
-              plugins: {
-                legend: {
-                  display: false,
-                },
-              },
-              scales: {
-                y: {
-                  beginAtZero: false,
-                  ticks: {
-                    callback: (value) => `$${value.toLocaleString()}`,
-                  },
-                },
-              },
-            }}
-          />
+        {/* Stock Search and Trade */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Search & Trade Stocks</CardTitle>
+            <CardDescription>Search for stocks and execute trades with your virtual cash</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search stocks (e.g., AAPL, GOOGL, MSFT)..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                  />
+                </div>
+              </div>
+
+              {searching && <div className="text-sm text-gray-500">Searching...</div>}
+
+              {searchData?.searchStocks && searchData.searchStocks.length > 0 && (
+                <div className="border rounded-lg divide-y dark:border-gray-700">
+                  {searchData.searchStocks.map((stock: any) => (
+                    <div
+                      key={stock.symbol}
+                      className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                      onClick={() => {
+                        setSelectedStock(stock);
+                        setShowTradeModal(true);
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold">{stock.symbol}</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">{stock.name}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold">${stock.price.toFixed(2)}</div>
+                          <div className={`text-sm ${stock.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {stock.change >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
         </Card>
 
-        {/* Search and Trade */}
-        <Card className="p-6 mb-8">
-          <h2 className="text-xl font-bold mb-4">Search & Trade</h2>
-          <div className="flex gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search stocks (e.g., AAPL, GOOGL)"
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Button>Search</Button>
-          </div>
-        </Card>
+        {/* Trade Modal */}
+        {showTradeModal && selectedStock && (
+          <Card className="mb-8 border-2 border-blue-500">
+            <CardHeader>
+              <CardTitle>Trade {selectedStock.symbol}</CardTitle>
+              <CardDescription>{selectedStock.name}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleTrade} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Trade Type</label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={tradeType === 'BUY' ? 'default' : 'outline'}
+                      onClick={() => setTradeType('BUY')}
+                      className="flex-1"
+                    >
+                      Buy
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={tradeType === 'SELL' ? 'default' : 'outline'}
+                      onClick={() => setTradeType('SELL')}
+                      className="flex-1"
+                    >
+                      Sell
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Number of Shares</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={shares}
+                    onChange={(e) => setShares(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                    placeholder="0"
+                    required
+                  />
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Current Price:</span>
+                    <span className="font-semibold">${selectedStock.price.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Total Cost:</span>
+                    <span className="font-semibold">
+                      ${(parseFloat(shares || '0') * selectedStock.price).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Available Cash:</span>
+                    <span className="font-semibold text-green-600">
+                      ${portfolio.cashBalance.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={trading} className="flex-1">
+                    {trading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        {tradeType === 'BUY' ? 'Buy' : 'Sell'} Shares
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowTradeModal(false);
+                      setSelectedStock(null);
+                      setShares('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Holdings */}
-        <Card className="p-6 mb-8">
-          <h2 className="text-xl font-bold mb-4">Your Holdings</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Symbol</th>
-                  <th className="text-left py-3 px-4">Name</th>
-                  <th className="text-right py-3 px-4">Shares</th>
-                  <th className="text-right py-3 px-4">Avg Cost</th>
-                  <th className="text-right py-3 px-4">Current Price</th>
-                  <th className="text-right py-3 px-4">Total Value</th>
-                  <th className="text-right py-3 px-4">Gain/Loss</th>
-                  <th className="text-right py-3 px-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {holdings.map((holding) => (
-                  <tr key={holding.symbol} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="py-3 px-4 font-bold">{holding.symbol}</td>
-                    <td className="py-3 px-4">{holding.name}</td>
-                    <td className="py-3 px-4 text-right">{holding.shares}</td>
-                    <td className="py-3 px-4 text-right">${holding.avgCost.toFixed(2)}</td>
-                    <td className="py-3 px-4 text-right">${holding.currentPrice.toFixed(2)}</td>
-                    <td className="py-3 px-4 text-right font-bold">
-                      ${holding.totalValue.toLocaleString()}
-                    </td>
-                    <td className={`py-3 px-4 text-right ${holding.gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {holding.gainLoss >= 0 ? '+' : ''}${holding.gainLoss.toLocaleString()}
-                      <br />
-                      <span className="text-sm">
-                        ({holding.gainLoss >= 0 ? '+' : ''}{holding.gainLossPercent.toFixed(2)}%)
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button size="sm" variant="outline">Buy</Button>
-                        <Button size="sm" variant="outline">Sell</Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Your Holdings</CardTitle>
+            <CardDescription>Stocks you currently own</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {holdings.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b dark:border-gray-700">
+                      <th className="text-left p-3">Symbol</th>
+                      <th className="text-left p-3">Name</th>
+                      <th className="text-right p-3">Shares</th>
+                      <th className="text-right p-3">Avg Cost</th>
+                      <th className="text-right p-3">Current Price</th>
+                      <th className="text-right p-3">Total Value</th>
+                      <th className="text-right p-3">Gain/Loss</th>
+                      <th className="text-right p-3">%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {holdings.map((holding: any) => (
+                      <tr key={holding.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="p-3 font-semibold">{holding.symbol}</td>
+                        <td className="p-3">{holding.name}</td>
+                        <td className="p-3 text-right">{holding.shares}</td>
+                        <td className="p-3 text-right">${holding.avgCostPerShare.toFixed(2)}</td>
+                        <td className="p-3 text-right">${holding.currentPrice.toFixed(2)}</td>
+                        <td className="p-3 text-right font-semibold">${holding.totalValue.toFixed(2)}</td>
+                        <td className={`p-3 text-right font-semibold ${holding.gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {holding.gainLoss >= 0 ? '+' : ''}${holding.gainLoss.toFixed(2)}
+                        </td>
+                        <td className={`p-3 text-right ${holding.gainLossPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {holding.gainLossPercent >= 0 ? '+' : ''}{holding.gainLossPercent.toFixed(2)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <ShoppingCart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                  No holdings yet
+                </h3>
+                <p className="text-gray-500">
+                  Search for stocks above and make your first trade!
+                </p>
+              </div>
+            )}
+          </CardContent>
         </Card>
 
         {/* Recent Transactions */}
-        <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">Recent Transactions</h2>
-          <div className="space-y-3">
-            {recentTransactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
-              >
-                <div className="flex items-center gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Transactions</CardTitle>
+            <CardDescription>Your trading history</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {portfolio.transactions && portfolio.transactions.length > 0 ? (
+              <div className="space-y-3">
+                {portfolio.transactions.slice(0, 10).map((transaction: any) => (
                   <div
-                    className={`px-3 py-1 rounded ${
-                      transaction.type === 'BUY'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}
+                    key={transaction.id}
+                    className="flex items-center justify-between p-3 border rounded-lg dark:border-gray-700"
                   >
-                    {transaction.type}
-                  </div>
-                  <div>
-                    <div className="font-bold">{transaction.symbol}</div>
-                    <div className="text-sm text-gray-600">
-                      {transaction.shares} shares @ ${transaction.price}
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-full ${transaction.type === 'BUY' ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
+                        {transaction.type === 'BUY' ? (
+                          <ArrowUpRight className="w-4 h-4 text-green-600 dark:text-green-400" />
+                        ) : (
+                          <ArrowDownRight className="w-4 h-4 text-red-600 dark:text-red-400" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-semibold">{transaction.symbol}</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          {transaction.shares} shares @ ${transaction.pricePerShare.toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`font-semibold ${transaction.type === 'BUY' ? 'text-red-600' : 'text-green-600'}`}>
+                        {transaction.type === 'BUY' ? '-' : '+'}${transaction.totalAmount.toFixed(2)}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {new Date(transaction.timestamp).toLocaleDateString()}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold">${transaction.total.toLocaleString()}</div>
-                  <div className="text-sm text-gray-600">{transaction.date}</div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No transactions yet
+              </div>
+            )}
+          </CardContent>
         </Card>
       </div>
     </div>

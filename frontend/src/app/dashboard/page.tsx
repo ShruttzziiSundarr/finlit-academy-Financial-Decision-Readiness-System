@@ -47,17 +47,26 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-grid">
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
           {/* Welcome Section */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-2">
-              Welcome back{data?.me ? `, ${data.me.firstName}` : ''}!
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Here's your financial learning progress
-            </p>
+          <div className="mb-8 relative">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center glow-purple-strong border-2 border-purple-400">
+                <span className="text-3xl font-bold mono-font text-white">
+                  {data?.me?.progress?.level || 1}
+                </span>
+              </div>
+              <div>
+                <h2 className="text-3xl font-bold glow-purple">
+                  PLAYER {data?.me ? data.me.firstName.toUpperCase() : 'LOADING...'}
+                </h2>
+                <p className="text-purple-300 mono-font text-lg">
+                  LEVEL {data?.me?.progress?.level || 1} • {data?.me?.progress?.experiencePoints || 0} XP
+                </p>
+              </div>
+            </div>
           </div>
 
           {loading ? (
@@ -168,15 +177,15 @@ function StatCard({
   positive?: boolean;
 }) {
   return (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+    <div className="bg-gradient-to-br from-gray-900/90 to-black/90 p-6 rounded-lg border-2 border-purple-500/30 glow-purple">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-gray-600 dark:text-gray-400">{title}</span>
-        {icon}
+        <span className="text-sm text-purple-300 uppercase tracking-wider">{title}</span>
+        <div className="text-purple-400">{icon}</div>
       </div>
-      <div className="text-2xl font-bold mb-1">{value}</div>
+      <div className="text-3xl font-bold mb-1 mono-font text-white">{value}</div>
       <div
-        className={`text-sm ${
-          positive === undefined ? 'text-gray-500' : positive ? 'text-green-600' : 'text-red-600'
+        className={`text-sm mono-font ${
+          positive === undefined ? 'text-gray-400' : positive ? 'text-green-400 glow-green' : 'text-red-400'
         }`}
       >
         {change}
@@ -200,14 +209,14 @@ function ActionCard({
 }) {
   return (
     <Link href={href}>
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer">
-        <div className={`${color} text-white w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
+      <div className="bg-gradient-to-br from-gray-900/90 to-black/90 p-6 rounded-lg border-2 border-purple-500/30 hover:border-purple-400 glow-purple transition-all hover:scale-105 hover:glow-purple-strong cursor-pointer">
+        <div className={`${color} text-white w-12 h-12 rounded-lg flex items-center justify-center mb-4 glow-purple`}>
           {icon}
         </div>
-        <h3 className="text-lg font-bold mb-2">{title}</h3>
-        <p className="text-gray-600 dark:text-gray-400 mb-4">{description}</p>
-        <div className="flex items-center text-blue-600 dark:text-blue-400">
-          <span className="text-sm font-medium">Get Started</span>
+        <h3 className="text-lg font-bold mb-2 text-purple-300 uppercase">{title}</h3>
+        <p className="text-gray-400 mb-4 text-sm">{description}</p>
+        <div className="flex items-center text-purple-400">
+          <span className="text-sm font-medium mono-font">START QUEST</span>
           <ArrowRight className="w-4 h-4 ml-1" />
         </div>
       </div>
