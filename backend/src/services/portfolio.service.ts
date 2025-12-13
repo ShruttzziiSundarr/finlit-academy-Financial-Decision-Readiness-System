@@ -114,81 +114,182 @@ export class PortfolioService {
 
   async getStockQuote(symbol: string) {
     try {
-      // Check cache first
-      const cacheKey = `stock:${symbol}`;
-      const cached = await cacheGet(cacheKey);
-      if (cached) {
-        return cached;
-      }
-
-      // Fetch from Alpha Vantage API
       const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
-      const response = await axios.get(
-        `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`
-      );
 
-      const data = response.data['Global Quote'];
-      if (!data) {
-        throw new UserInputError('Stock symbol not found');
+      // Try to use Alpha Vantage API if key is available
+      if (apiKey && apiKey !== '' && apiKey !== 'your_alpha_vantage_api_key_here') {
+        try {
+          // Check cache first (5 minute TTL)
+          const cacheKey = `stock:${symbol}`;
+          const cached = await cacheGet(cacheKey);
+          if (cached) {
+            return JSON.parse(cached);
+          }
+
+          // Fetch from Alpha Vantage
+          const response = await axios.get(
+            `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`
+          );
+
+          const quote = response.data['Global Quote'];
+          if (quote && quote['05. price']) {
+            const stockData = {
+              symbol: quote['01. symbol'],
+              name: quote['01. symbol'], // Alpha Vantage doesn't provide company name in quote
+              price: parseFloat(quote['05. price']),
+              change: parseFloat(quote['09. change']),
+              changePercent: parseFloat(quote['10. change percent'].replace('%', '')),
+              volume: parseInt(quote['06. volume']),
+              dayHigh: parseFloat(quote['03. high']),
+              dayLow: parseFloat(quote['04. low']),
+              marketCap: 0, // Not available in this endpoint
+              yearHigh: 0,
+              yearLow: 0,
+            };
+
+            // Cache for 5 minutes (300 seconds)
+            await cacheSet(cacheKey, JSON.stringify(stockData), 300);
+
+            logger.info(`Fetched real-time quote for ${symbol} from Alpha Vantage`);
+            return stockData;
+          }
+        } catch (apiError) {
+          logger.warn(`Alpha Vantage API error for ${symbol}, falling back to mock data:`, apiError);
+        }
       }
 
-      const quote = {
-        symbol: data['01. symbol'],
-        name: symbol, // In production, fetch company name separately
-        price: parseFloat(data['05. price']),
-        change: parseFloat(data['09. change']),
-        changePercent: parseFloat(data['10. change percent'].replace('%', '')),
-        volume: parseInt(data['06. volume']),
-        marketCap: 0, // Would need separate API call
-        dayHigh: parseFloat(data['03. high']),
-        dayLow: parseFloat(data['04. low']),
-        yearHigh: 0, // Would need historical data
-        yearLow: 0,
+      // Fallback to mock stock data
+      const mockStocks: { [key: string]: any } = {
+        'AAPL': { symbol: 'AAPL', name: 'Apple Inc.', price: 178.50, change: 2.35, changePercent: 1.33 },
+        'MSFT': { symbol: 'MSFT', name: 'Microsoft Corporation', price: 378.91, change: -1.20, changePercent: -0.32 },
+        'GOOGL': { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 140.15, change: 3.45, changePercent: 2.52 },
+        'AMZN': { symbol: 'AMZN', name: 'Amazon.com Inc.', price: 151.94, change: 1.88, changePercent: 1.25 },
+        'TSLA': { symbol: 'TSLA', name: 'Tesla Inc.', price: 242.84, change: -5.62, changePercent: -2.26 },
+        'META': { symbol: 'META', name: 'Meta Platforms Inc.', price: 484.03, change: 8.12, changePercent: 1.71 },
+        'NVDA': { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 495.22, change: 12.50, changePercent: 2.59 },
+        'JPM': { symbol: 'JPM', name: 'JPMorgan Chase & Co.', price: 182.45, change: -0.85, changePercent: -0.46 },
+        'V': { symbol: 'V', name: 'Visa Inc.', price: 273.61, change: 2.10, changePercent: 0.77 },
+        'WMT': { symbol: 'WMT', name: 'Walmart Inc.', price: 67.89, change: 0.45, changePercent: 0.67 },
+        'DIS': { symbol: 'DIS', name: 'Walt Disney Company', price: 92.35, change: -1.15, changePercent: -1.23 },
+        'NFLX': { symbol: 'NFLX', name: 'Netflix Inc.', price: 485.73, change: 6.20, changePercent: 1.29 },
+        'INTC': { symbol: 'INTC', name: 'Intel Corporation', price: 42.88, change: 0.32, changePercent: 0.75 },
+        'AMD': { symbol: 'AMD', name: 'Advanced Micro Devices', price: 118.95, change: -2.45, changePercent: -2.02 },
+        'PYPL': { symbol: 'PYPL', name: 'PayPal Holdings Inc.', price: 61.34, change: 1.20, changePercent: 2.00 },
       };
 
-      // Cache for 1 minute
-      await cacheSet(cacheKey, quote, 60);
+      // Return mock data if available, otherwise generate random data
+      const stock = mockStocks[symbol.toUpperCase()];
+      if (stock) {
+        return {
+          ...stock,
+          volume: 1000000 + Math.floor(Math.random() * 5000000),
+          marketCap: 100000000000 + Math.floor(Math.random() * 900000000000),
+          dayHigh: stock.price + 5,
+          dayLow: stock.price - 5,
+          yearHigh: stock.price + 50,
+          yearLow: stock.price - 50,
+        };
+      }
 
-      return quote;
-    } catch (error) {
-      logger.error('Get stock quote error:', error);
-      // Return mock data for demo purposes
+      // For unknown symbols, return generated mock data
       return {
         symbol,
         name: symbol,
-        price: 100 + Math.random() * 50,
-        change: -5 + Math.random() * 10,
-        changePercent: -2 + Math.random() * 4,
-        volume: 1000000,
-        marketCap: 10000000000,
-        dayHigh: 105,
-        dayLow: 95,
-        yearHigh: 150,
-        yearLow: 80,
+        price: 50 + Math.random() * 200,
+        change: -10 + Math.random() * 20,
+        changePercent: -5 + Math.random() * 10,
+        volume: 1000000 + Math.floor(Math.random() * 5000000),
+        marketCap: 10000000000 + Math.floor(Math.random() * 90000000000),
+        dayHigh: 0,
+        dayLow: 0,
+        yearHigh: 0,
+        yearLow: 0,
       };
+    } catch (error) {
+      logger.error('Get stock quote error:', error);
+      throw error;
     }
   }
 
   async searchStocks(searchQuery: string) {
     try {
       const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
-      const response = await axios.get(
-        `https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=${searchQuery}&apikey=${apiKey}`
+
+      // Try to use Alpha Vantage API if key is available
+      if (apiKey && apiKey !== '' && apiKey !== 'your_alpha_vantage_api_key_here') {
+        try {
+          // Use Symbol Search endpoint
+          const response = await axios.get(
+            `https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=${searchQuery}&apikey=${apiKey}`
+          );
+
+          const matches = response.data.bestMatches;
+          if (matches && matches.length > 0) {
+            // Get quotes for top 5 matches
+            const results = await Promise.all(
+              matches.slice(0, 5).map(async (match: any) => {
+                try {
+                  const quote = await this.getStockQuote(match['1. symbol']);
+                  return {
+                    symbol: match['1. symbol'],
+                    name: match['2. name'],
+                    price: quote.price,
+                    change: quote.change,
+                    changePercent: quote.changePercent,
+                  };
+                } catch {
+                  // If quote fails, return basic info
+                  return {
+                    symbol: match['1. symbol'],
+                    name: match['2. name'],
+                    price: 0,
+                    change: 0,
+                    changePercent: 0,
+                  };
+                }
+              })
+            );
+
+            logger.info(`Alpha Vantage search returned ${results.length} results for "${searchQuery}"`);
+            return results;
+          }
+        } catch (apiError) {
+          logger.warn(`Alpha Vantage search API error, falling back to mock data:`, apiError);
+        }
+      }
+
+      // Fallback to mock popular stocks
+      const mockStocks = [
+        { symbol: 'AAPL', name: 'Apple Inc.', price: 178.50, change: 2.35, changePercent: 1.33 },
+        { symbol: 'MSFT', name: 'Microsoft Corporation', price: 378.91, change: -1.20, changePercent: -0.32 },
+        { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 140.15, change: 3.45, changePercent: 2.52 },
+        { symbol: 'AMZN', name: 'Amazon.com Inc.', price: 151.94, change: 1.88, changePercent: 1.25 },
+        { symbol: 'TSLA', name: 'Tesla Inc.', price: 242.84, change: -5.62, changePercent: -2.26 },
+        { symbol: 'META', name: 'Meta Platforms Inc.', price: 484.03, change: 8.12, changePercent: 1.71 },
+        { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 495.22, change: 12.50, changePercent: 2.59 },
+        { symbol: 'JPM', name: 'JPMorgan Chase & Co.', price: 182.45, change: -0.85, changePercent: -0.46 },
+        { symbol: 'V', name: 'Visa Inc.', price: 273.61, change: 2.10, changePercent: 0.77 },
+        { symbol: 'WMT', name: 'Walmart Inc.', price: 67.89, change: 0.45, changePercent: 0.67 },
+        { symbol: 'DIS', name: 'Walt Disney Company', price: 92.35, change: -1.15, changePercent: -1.23 },
+        { symbol: 'NFLX', name: 'Netflix Inc.', price: 485.73, change: 6.20, changePercent: 1.29 },
+        { symbol: 'INTC', name: 'Intel Corporation', price: 42.88, change: 0.32, changePercent: 0.75 },
+        { symbol: 'AMD', name: 'Advanced Micro Devices', price: 118.95, change: -2.45, changePercent: -2.02 },
+        { symbol: 'PYPL', name: 'PayPal Holdings Inc.', price: 61.34, change: 1.20, changePercent: 2.00 },
+      ];
+
+      // Filter stocks based on search query
+      const query = searchQuery.toLowerCase();
+      const filtered = mockStocks.filter(stock =>
+        stock.symbol.toLowerCase().includes(query) ||
+        stock.name.toLowerCase().includes(query)
       );
 
-      const matches = response.data.bestMatches || [];
-      return matches.slice(0, 10).map((match: any) => ({
-        symbol: match['1. symbol'],
-        name: match['2. name'],
-        price: 0, // Would need separate quote call
-        change: 0,
-        changePercent: 0,
-        volume: 0,
-        marketCap: 0,
-        dayHigh: 0,
-        dayLow: 0,
-        yearHigh: 0,
-        yearLow: 0,
+      return filtered.slice(0, 10).map(stock => ({
+        symbol: stock.symbol,
+        name: stock.name,
+        price: stock.price,
+        change: stock.change,
+        changePercent: stock.changePercent,
       }));
     } catch (error) {
       logger.error('Search stocks error:', error);

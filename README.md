@@ -1,20 +1,20 @@
-# FinLit Academy - Gamified Financial Literacy Platform
+# 🎮 FinLit Academy - Gamified Financial Literacy Platform
 
 ## Overview
-Interactive platform that teaches financial concepts through real-world simulations and AI-powered personalized learning paths.
+A Minecraft/Roblox-inspired financial literacy platform that makes learning about money FUN! Battle financial challenges, trade stocks in real-time, and level up your money skills.
 
 ### Problem Statement
 66% of Americans are financially illiterate, leading to poor financial decisions, debt accumulation, and inability to build wealth.
 
 ### Solution
-A comprehensive learning platform featuring:
-- Interactive budgeting simulator with real market data
-- Stock market simulation game with virtual portfolio
-- AI financial advisor chatbot
-- Progress tracking with ML-powered adaptive learning
-- Community challenges and leaderboards
-- Mobile-responsive PWA design
-- Multilingual support
+A **GAMING-FIRST** learning platform featuring:
+- 🎯 **Battle Arena** - Compete in financial challenges and earn legendary rewards
+- 📈 **Stock Battleground** - Real-time stock trading with Alpha Vantage API integration
+- 💰 **Budget Arena** - Track expenses with fully functional budget categories
+- 📚 **Learning Modules** - Interactive lessons with gaming progression
+- 🏆 **Leaderboards** - Compete with other warriors (100% private data)
+- 🌟 **Gaming Theme** - Purple/black Minecraft-style UI with glowing effects
+- 📱 **Mobile-responsive** - Play anywhere, anytime
 
 ## Technical Stack
 

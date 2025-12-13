@@ -4,6 +4,7 @@ import { budgetResolvers } from './budget.resolver';
 import { courseResolvers } from './course.resolver';
 import { challengeResolvers } from './challenge.resolver';
 import { chatResolvers } from './chat.resolver';
+import { bossBattleResolvers } from './boss-battle.resolver';
 import { GraphQLScalarType, Kind } from 'graphql';
 
 const dateTimeScalar = new GraphQLScalarType({
@@ -32,6 +33,7 @@ export const resolvers = {
     ...courseResolvers.Query,
     ...challengeResolvers.Query,
     ...chatResolvers.Query,
+    ...bossBattleResolvers.Query,
   },
   Mutation: {
     ...userResolvers.Mutation,
@@ -40,6 +42,7 @@ export const resolvers = {
     ...courseResolvers.Mutation,
     ...challengeResolvers.Mutation,
     ...chatResolvers.Mutation,
+    ...bossBattleResolvers.Mutation,
   },
   Subscription: {
     ...portfolioResolvers.Subscription,

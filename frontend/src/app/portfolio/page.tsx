@@ -183,12 +183,21 @@ function PortfolioContent() {
   const totalInvested = portfolio.totalValue - portfolio.cashBalance;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-8">
+    <div className="min-h-screen bg-grid p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Stock Trading Simulator</h1>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Virtual Portfolio</span>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg flex items-center justify-center glow-purple-strong border-2 border-green-400">
+              <TrendingUp className="w-10 h-10 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold glow-purple">STOCK BATTLEGROUND</h1>
+              <p className="text-purple-300 mono-font">TRADE • INVEST • DOMINATE THE MARKET</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 bg-gradient-to-r from-purple-900/50 to-pink-900/50 px-4 py-2 rounded-lg border-2 border-purple-500/50 glow-purple">
+            <Wallet className="w-5 h-5 text-green-400" />
+            <span className="text-sm text-purple-300 mono-font">VIRTUAL PORTFOLIO</span>
           </div>
         </div>
 

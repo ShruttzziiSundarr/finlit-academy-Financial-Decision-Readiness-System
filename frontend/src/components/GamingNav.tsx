@@ -12,7 +12,8 @@ import {
   Trophy,
   MessageSquare,
   LogOut,
-  Zap
+  Zap,
+  Sword
 } from 'lucide-react';
 
 export default function GamingNav() {
@@ -35,6 +36,7 @@ export default function GamingNav() {
     { href: '/portfolio', icon: TrendingUp, label: 'STOCKS' },
     { href: '/learn', icon: BookOpen, label: 'LEARN' },
     { href: '/challenges', icon: Trophy, label: 'BATTLES' },
+    { href: '/boss-battles', icon: Sword, label: 'BOSSES' },
     { href: '/chat', icon: MessageSquare, label: 'AI BOSS' },
   ];
 

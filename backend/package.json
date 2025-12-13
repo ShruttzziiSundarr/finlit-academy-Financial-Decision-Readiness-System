@@ -11,7 +11,9 @@
     "test:ci": "jest --ci",
     "db:migrate": "ts-node src/database/migrate.ts",
     "db:seed": "ts-node src/database/seed.ts",
-    "db:fix-budget": "ts-node src/database/add-budget-categories.ts"
+    "db:fix-budget": "ts-node src/database/add-budget-categories.ts",
+    "db:seed-challenges": "ts-node src/database/seed-challenges.ts",
+    "db:seed-bosses": "ts-node src/database/seed-boss-battles.ts"
   },
   "dependencies": {
     "apollo-server-express": "^3.13.0",

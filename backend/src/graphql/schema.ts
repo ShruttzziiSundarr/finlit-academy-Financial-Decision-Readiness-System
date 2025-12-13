@@ -257,6 +257,64 @@ export const typeDefs = gql`
     updatedAt: DateTime!
   }
 
+  type BossBattle {
+    id: ID!
+    name: String!
+    title: String!
+    description: String!
+    topic: String!
+    difficulty: String!
+    maxHealth: Int!
+    damagePerCorrect: Int!
+    totalQuestions: Int!
+    rewardPoints: Int!
+    avatarUrl: String!
+    personality: String!
+  }
+
+  type UserBossBattle {
+    userBattleId: ID!
+    userId: ID!
+    bossId: ID!
+    currentHealth: Int!
+    questionsAsked: Int!
+    questionsCorrect: Int!
+    status: String!
+    conversationHistory: [ChatMessage!]!
+    boss: BossBattle!
+  }
+
+  type BossAnswer {
+    isCorrect: Boolean!
+    correctAnswer: String!
+    newHealth: Int!
+    damage: Int!
+    questionsCorrect: Int!
+    questionsAsked: Int!
+    status: String!
+    isDefeated: Boolean!
+    rewardPoints: Int!
+  }
+
+  type BossQuestion {
+    userBattleId: ID!
+    bossResponse: String!
+    currentHealth: Int!
+    questionsAsked: Int!
+    totalQuestions: Int!
+  }
+
+  type BossAchievement {
+    bossId: ID!
+    bossName: String!
+    bossTitle: String!
+    avatarUrl: String!
+    defeatedAt: DateTime!
+    finalScore: Int!
+    timeTaken: Int!
+    rewardPoints: Int!
+  }
+
   input RegisterInput {
     email: String!
     username: String!
@@ -317,6 +375,12 @@ export const typeDefs = gql`
     # Chat queries
     chatSession(id: ID!): ChatSession
     chatHistory: [ChatSession!]!
+
+    # Boss Battle queries
+    bossBattles: [BossBattle!]!
+    bossBattle(id: ID!): BossBattle
+    userActiveBattle: UserBossBattle
+    userBossAchievements: [BossAchievement!]!
   }
 
   type Mutation {
@@ -342,6 +406,11 @@ export const typeDefs = gql`
 
     # Chat mutations
     sendMessage(input: ChatInput!): ChatMessage!
+
+    # Boss Battle mutations
+    startBossBattle(bossId: ID!): UserBossBattle!
+    askBossQuestion(userBattleId: ID!, message: String!): BossQuestion!
+    submitBossAnswer(userBattleId: ID!, answer: String!): BossAnswer!
   }
 
   type Subscription {
