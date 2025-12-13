@@ -10,7 +10,8 @@
     "test": "jest --watchAll",
     "test:ci": "jest --ci",
     "db:migrate": "ts-node src/database/migrate.ts",
-    "db:seed": "ts-node src/database/seed.ts"
+    "db:seed": "ts-node src/database/seed.ts",
+    "db:fix-budget": "ts-node src/database/add-budget-categories.ts"
   },
   "dependencies": {
     "apollo-server-express": "^3.13.0",

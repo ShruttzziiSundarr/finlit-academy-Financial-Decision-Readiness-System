@@ -197,13 +197,24 @@ function BudgetContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-8">
+    <div className="min-h-screen bg-grid p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Budget Manager</h1>
-          <Button onClick={() => setShowAddExpense(!showAddExpense)}>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center glow-purple-strong border-2 border-blue-400">
+              <Wallet className="w-10 h-10 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold glow-purple">BUDGET ARENA</h1>
+              <p className="text-purple-300 mono-font">TRACK • MANAGE • DOMINATE YOUR FINANCES</p>
+            </div>
+          </div>
+          <Button
+            onClick={() => setShowAddExpense(!showAddExpense)}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 border-2 border-purple-400 glow-purple"
+          >
             <PlusCircle className="w-4 h-4 mr-2" />
-            Add Expense
+            ADD EXPENSE
           </Button>
         </div>
 

@@ -182,6 +182,9 @@ Remember: Start early, stay consistent, think long-term!', 'ARTICLE', 3, NOW());
       console.log('ℹ️  Modules already exist, skipping...\n');
     }
 
+    // Note: Budget categories are created automatically when users register
+    // See user.service.ts for the default budget setup
+
     if (parseInt(existingChallenges.rows[0].count) === 0) {
       // Seed Challenges
       console.log('🏆 Seeding challenges...');

@@ -61,9 +61,26 @@ export class UserService {
       );
 
       // Create initial budget
+      const budgetResult = await query(
+        'INSERT INTO budgets (user_id, name, total_income, savings_goal) VALUES ($1, $2, $3, $4) RETURNING id',
+        [user.id, 'My Budget', 5000, 1000]
+      );
+
+      const budgetId = budgetResult.rows[0].id;
+
+      // Create default budget categories
       await query(
-        'INSERT INTO budgets (user_id, name, total_income) VALUES ($1, $2, $3)',
-        [user.id, 'My Budget', 0]
+        `INSERT INTO budget_categories (budget_id, name, allocated_amount, color, icon)
+         VALUES
+           ($1, 'Housing', 1200, '#3b82f6', '🏠'),
+           ($1, 'Food & Groceries', 500, '#10b981', '🛒'),
+           ($1, 'Transportation', 300, '#f59e0b', '🚗'),
+           ($1, 'Utilities', 200, '#8b5cf6', '💡'),
+           ($1, 'Entertainment', 250, '#ec4899', '🎮'),
+           ($1, 'Healthcare', 150, '#14b8a6', '⚕️'),
+           ($1, 'Savings', 400, '#6366f1', '💎'),
+           ($1, 'Other', 100, '#64748b', '📦')`,
+        [budgetId]
       );
 
       // Generate tokens
